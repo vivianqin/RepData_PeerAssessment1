@@ -7,19 +7,97 @@ output:
 
 
 ## Loading and preprocessing the data
-
+library(data.table)
+d= read.csv("activity.csv", sep=",", header=TRUE) 
+dim(d)
+str(d)
 
 
 ## What is mean total number of steps taken per day?
 
 
+library(dplyr)
+
+d$date<- as.Date(d$date)  ##covert chr to date
+
+
+TotalSteps<- d%>%
+  group_by(date)%>%
+        filter(!is.na(steps))%>%
+        summarise(total_steps = sum(steps, na.rm=TRUE))
+TotalSteps
+
+library(ggplot2)
+
+ggplot(TotalSteps, aes(x = total_steps)) +
+        geom_histogram(fill = "red", binwidth = 800) +
+        labs(title = "Steps Per Day", x = "Total Steps", y = "Frequency")
+
+
+meansteps<- mean(TotalSteps$total_steps, na.rm=TRUE)
+mediansteps<- median(TotalSteps$total_steps, na.rm=TRUE)
+
+meansteps
+mediansteps
 
 ## What is the average daily activity pattern?
 
+Intervald<- d%>%
+        group_by(interval)%>%
+        filter(!is.na(steps))%>%
+        summarise(avg_steps = mean(steps, na.rm=TRUE))
+Intervald
+
+ggplot(Intervald, aes(x =interval , y=avg_steps)) +
+        geom_line(color="red", size=1) +
+        labs(title = "Average Daily Activity", x = "Interval", y = "Steps per day")
+        
+Intervald[which.max(Intervald$avg_steps),]
 
 
 ## Imputing missing values
+sum(is.na(d$steps))
 
+d2<- d
+neg<- is.na(d2$steps)
+avg_interval<- tapply(d2$steps, d2$interval, mean, na.rm=TRUE, simplify = TRUE)
+d2$steps[neg] <- avg_interval[as.character(d2$interval[neg])]
+sum(is.na(d$steps))
+sum(is.na(d2$steps))
+
+TotalSteps2<- d2%>%
+  group_by(date)%>%
+        filter(!is.na(steps))%>%
+        summarise(total_steps2 = sum(steps, na.rm=TRUE))
+TotalSteps2
+
+ggplot(TotalSteps2, aes(x = total_steps2)) +
+        geom_histogram(fill = "red", binwidth = 800) +
+        labs(title = "Steps Per Day (NA inputted)", x = "Total Steps", y = "Frequency")
+
+meansteps2<- mean(TotalSteps2$total_steps2, na.rm=TRUE)
+mediansteps2<- median(TotalSteps2$total_steps2, na.rm=TRUE)
+
+meansteps
+meansteps2
+mediansteps
+mediansteps2
 
 
 ## Are there differences in activity patterns between weekdays and weekends?
+
+d2<- d2%>%
+        mutate(daytype= ifelse(weekdays(d2$date)=="Saturday" | weekdays(d2$date)=="Sunday", "Weekend", "Weekday"))
+head(d2)
+
+Intervald2<- d2%>%
+        group_by(interval, daytype)%>%
+        summarise(avg_steps2 = mean(steps, na.rm=TRUE))
+head(Intervald2)
+
+plot<- ggplot(Intervald2, aes(x =interval , y=avg_steps2, color=daytype)) +
+       geom_line() +
+       labs(title = "Daily Steps by Day Type", x = "Interval", y = "# of Steps") +
+       facet_wrap(~daytype, ncol = 1, nrow=2)
+print(plot)
+```
